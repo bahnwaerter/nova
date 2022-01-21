@@ -6586,11 +6586,18 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         instance_ref = objects.Instance(**self.test_instance)
-        instance_ref.flavor.extra_specs = {'hw_video:ram_max_mb': "100"}
+        instance_ref.flavor.extra_specs = {
+            'hw_video:ram_max_mb': "100",
+            'hw_video:ram_bar1_max_mb': "100",
+            'hw_video:ram_bar2_ext_max_mb': "100",
+            'hw_video:ram_vga_max_mb': "100"}
         image_meta = objects.ImageMeta.from_dict({
             "disk_format": "raw",
             "properties": {"hw_video_model": "qxl",
-                           "hw_video_ram": "64"}})
+                           "hw_video_ram": "64",
+                           "hw_video_ram_bar1": "32",
+                           "hw_video_ram_bar2_ext": "16",
+                           "hw_video_ram_vga": "8"}})
 
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance_ref,
@@ -6621,6 +6628,43 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(cfg.devices[4].type, "spice")
         self.assertEqual(cfg.devices[5].type, "qxl")
         self.assertEqual(cfg.devices[5].vram, 65536)
+        self.assertEqual(cfg.devices[5].ram, 32768)
+        self.assertEqual(cfg.devices[5].vram64, 16384)
+        self.assertEqual(cfg.devices[5].vgamem, 8192)
+
+    def test__set_video_driver_vram_none(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        video = vconfig.LibvirtConfigGuestVideo()
+        # assert that ram is not set if no one is given
+        for ram_type in fields.VideoRam.ALL:
+            drvr._set_video_driver_vram(video, ram_type, 0, 0)
+            self.assertIsNone(video.ram)
+            self.assertIsNone(video.vram)
+            self.assertIsNone(video.vram64)
+            self.assertIsNone(video.vgamem)
+
+    def test__set_video_vram_limits(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        video = vconfig.LibvirtConfigGuestVideo()
+        # assert that limits work for all ram types
+        for ram_type in fields.VideoRam.ALL:
+            self.assertRaises(exception.RequestedVRamTooHigh,
+                              drvr._set_video_driver_vram,
+                              video, ram_type, 128, 64)
+
+    def test__set_video_vram_values(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        video = vconfig.LibvirtConfigGuestVideo()
+        video.type = fields.VideoModel.QXL
+        # assert that vram values are set correctly
+        drvr._set_video_driver_vram(video, fields.VideoRam.RAM, 64, 128)
+        drvr._set_video_driver_vram(video, fields.VideoRam.VRAM, 32, 128)
+        drvr._set_video_driver_vram(video, fields.VideoRam.VRAM64, 16, 128)
+        drvr._set_video_driver_vram(video, fields.VideoRam.VGAMEM, 8, 128)
+        self.assertEqual(65536, video.ram)
+        self.assertEqual(32768, video.vram)
+        self.assertEqual(16384, video.vram64)
+        self.assertEqual(8192, video.vgamem)
 
     def _test_add_video_driver(self, model):
         self.flags(virt_type='kvm', group='libvirt')
@@ -6632,11 +6676,17 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         guest = vconfig.LibvirtConfigGuest()
         flavor = objects.Flavor(
-            extra_specs={'hw_video:ram_max_mb': '512'})
+            extra_specs={'hw_video:ram_max_mb': '512',
+                         'hw_video:ram_bar1_max_mb': '512',
+                         'hw_video:ram_bar2_ext_max_mb': '512',
+                         'hw_video:ram_vga_max_mb': '512'})
         image_meta = objects.ImageMeta.from_dict({
             'properties': {
                 'hw_video_model': model,
                 'hw_video_ram': 8,
+                'hw_video_ram_bar1': 16,
+                'hw_video_ram_bar2_ext': 32,
+                'hw_video_ram_vga': 64,
             },
         })
 
@@ -6644,6 +6694,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         video = drvr._add_video_driver(guest, image_meta, flavor)
         self.assertEqual(model, video.type)
         self.assertEqual(8192, video.vram)  # should be in bytes
+        if model == fields.VideoModel.QXL:
+            self.assertEqual(16384, video.ram)
+            self.assertEqual(32768, video.vram64)
+            self.assertEqual(65536, video.vgamem)
 
     def test__add_video_driver(self):
         self._test_add_video_driver('qxl')
@@ -6723,7 +6777,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         image_meta = objects.ImageMeta.from_dict({
             "disk_format": "raw",
             "properties": {"hw_video_model": "qxl",
-                           "hw_video_ram": "64"}})
+                           "hw_video_ram": "64",
+                           "hw_video_ram_bar1": "64",
+                           "hw_video_ram_bar2_ext": "64",
+                           "hw_video_ram_vga": "64"}})
 
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance_ref,
@@ -6745,11 +6802,17 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         instance_ref = objects.Instance(**self.test_instance)
         flavor = instance_ref.get_flavor()
-        flavor.extra_specs = {'hw_video:ram_max_mb': "50"}
+        flavor.extra_specs = {'hw_video:ram_max_mb': "50",
+                              'hw_video:ram_bar1_max_mb': "50",
+                              'hw_video:ram_bar2_ext_max_mb': "50",
+                              'hw_video:ram_vga_max_mb': "50"}
         image_meta = objects.ImageMeta.from_dict({
             "disk_format": "raw",
             "properties": {"hw_video_model": "qxl",
-                           "hw_video_ram": "64"}})
+                           "hw_video_ram": "64",
+                           "hw_video_ram_bar1": "64",
+                           "hw_video_ram_bar2_ext": "64",
+                           "hw_video_ram_vga": "64"}})
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
 
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,

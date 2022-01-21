@@ -1,0 +1,14 @@
+---
+features:
+  - |
+    The new image metadata properties ``hw_video_ram_bar1``,
+    ``hw_video_ram_bar2_ext``, and ``hw_video_ram_vga``, have been added.
+    These properties can be used to specify the video RAM to provide for the
+    primary bar, the secondary bar extension (64 bit) and the VGA framebuffer
+    of a QXL graphics adapter on compute nodes using the libvirt virt driver.
+    All three properties are limited by the new flavors extra specifications
+    ``hw_video:ram_bar1_max_mb``, ``hw_video:ram_bar2_ext_max_mb``, and
+    ``hw_video:ram_vga_max_mb``. Note that video RAM values for all three
+    properties and limits are specified in MB. If an image property from above
+    is used, make sure that its corresponding limit is set in a referenced
+    flavor; otherwise, a runtime error occurs during instance creation.

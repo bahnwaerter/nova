@@ -2057,7 +2057,10 @@ class LibvirtConfigGuestVideo(LibvirtConfigGuestDevice):
                                                       **kwargs)
 
         self.type = 'virtio'
+        self.ram = None
         self.vram = None
+        self.vram64 = None
+        self.vgamem = None
         self.heads = None
         self.driver_iommu = False
 
@@ -2071,8 +2074,14 @@ class LibvirtConfigGuestVideo(LibvirtConfigGuestDevice):
         model = etree.Element("model")
         model.set("type", self.type)
 
+        if self.ram:
+            model.set("ram", str(self.ram))
         if self.vram:
             model.set("vram", str(self.vram))
+        if self.vram64:
+            model.set("vram64", str(self.vram64))
+        if self.vgamem:
+            model.set("vgamem", str(self.vgamem))
 
         if self.heads:
             model.set("heads", str(self.heads))

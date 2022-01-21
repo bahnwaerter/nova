@@ -3408,6 +3408,20 @@ class LibvirtConfigGuestVideoTest(LibvirtConfigBaseTest):
                     <model type='qxl' vram='9216' heads='1'/>
                 </video>""")
 
+    def test_config_video_driver_vram(self):
+        obj = config.LibvirtConfigGuestVideo()
+        obj.type = 'qxl'
+        obj.ram = '8192'
+        obj.vram = '16384'
+        obj.vram64 = '32768'
+        obj.vgamem = '65536'
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+<video>
+    <model type='qxl' ram='8192' vram='16384' vram64='32768' vgamem='65536'/>
+ </video>""")
+
 
 class LibvirtConfigGuestSeclabel(LibvirtConfigBaseTest):
 

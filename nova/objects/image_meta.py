@@ -187,14 +187,20 @@ class ImageMetaProps(base.NovaObject):
     # Version 1.28: Added 'socket' to 'hw_pci_numa_affinity_policy'
     # Version 1.29: Added 'hw_input_bus' field
     # Version 1.30: Added 'bochs' as an option to 'hw_video_model'
+    # Version 1.31: Added 'hw_video_ram_bar1', 'hw_video_ram_bar2_ext' and
+    #               'hw_video_ram_vga' fields
     # NOTE(efried): When bumping this version, the version of
     # ImageMetaPropsPayload must also be bumped. See its docstring for details.
-    VERSION = '1.30'
+    VERSION = '1.31'
 
     def obj_make_compatible(self, primitive, target_version):
         super(ImageMetaProps, self).obj_make_compatible(primitive,
                                                         target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 31):
+            primitive.pop('hw_video_ram_bar1', None)
+            primitive.pop('hw_video_ram_bar2_ext', None)
+            primitive.pop('hw_video_ram_vga', None)
         if target_version < (1, 30):
             video = primitive.get('hw_video_model', None)
             if video == fields.VideoModel.BOCHS:
@@ -423,6 +429,18 @@ class ImageMetaProps(base.NovaObject):
 
         # MB of video RAM to provide eg 64
         'hw_video_ram': fields.IntegerField(),
+
+        # MB of video RAM to provide for the primary bar of a qxl video adapter
+        # eg 64
+        'hw_video_ram_bar1': fields.IntegerField(),
+
+        # MB of video RAM to provide for the secondary bar extension (64 bit)
+        # of a qxl video adapter eg 64
+        'hw_video_ram_bar2_ext': fields.IntegerField(),
+
+        # MB of video RAM to provide for the VGA framebuffer of a qxl video
+        # adapter eg 16
+        'hw_video_ram_vga': fields.IntegerField(),
 
         # name of a NIC device model eg virtio, e1000, rtl8139
         'hw_vif_model': fields.VIFModelField(),

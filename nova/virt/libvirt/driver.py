@@ -5958,6 +5958,22 @@ class LibvirtDriver(driver.ComputeDriver):
     def _video_model_supported(self, model):
         return model in fields.VideoModel.ALL
 
+    def _set_video_driver_vram(self, video, ram_type, video_ram, max_ram):
+        if video_ram > max_ram:
+            raise exception.RequestedVRamTooHigh(req_vram=video_ram,
+                                                 max_vram=max_ram)
+        if max_ram and video_ram:
+            video_ram_kib = video_ram * units.Mi // units.Ki
+            if ram_type == fields.VideoRam.VRAM:
+                video.vram = video_ram_kib
+            elif video.type == fields.VideoModel.QXL:
+                if ram_type == fields.VideoRam.RAM:
+                    video.ram = video_ram_kib
+                elif ram_type == fields.VideoRam.VRAM64:
+                    video.vram64 = video_ram_kib
+                elif ram_type == fields.VideoRam.VGAMEM:
+                    video.vgamem = video_ram_kib
+
     def _add_video_driver(self, guest, image_meta, flavor):
         video = vconfig.LibvirtConfigGuestVideo()
         # NOTE(ldbragst): The following logic sets the video.type
@@ -5995,13 +6011,22 @@ class LibvirtDriver(driver.ComputeDriver):
                 raise exception.InvalidVideoMode(model=video.type)
 
         # Set video memory, only if the flavor's limit is set
-        video_ram = image_meta.properties.get('hw_video_ram', 0)
-        max_vram = int(flavor.extra_specs.get('hw_video:ram_max_mb', 0))
-        if video_ram > max_vram:
-            raise exception.RequestedVRamTooHigh(req_vram=video_ram,
-                                                 max_vram=max_vram)
-        if max_vram and video_ram:
-            video.vram = video_ram * units.Mi // units.Ki
+        vram = image_meta.properties.get('hw_video_ram', 0)
+        m_ram = int(flavor.extra_specs.get('hw_video:ram_max_mb', 0))
+        self._set_video_driver_vram(video, fields.VideoRam.VRAM, vram, m_ram)
+
+        vram = image_meta.properties.get('hw_video_ram_bar1', 0)
+        m_ram = int(flavor.extra_specs.get('hw_video:ram_bar1_max_mb', 0))
+        self._set_video_driver_vram(video, fields.VideoRam.RAM, vram, m_ram)
+
+        vram = image_meta.properties.get('hw_video_ram_bar2_ext', 0)
+        m_ram = int(flavor.extra_specs.get('hw_video:ram_bar2_ext_max_mb', 0))
+        self._set_video_driver_vram(video, fields.VideoRam.VRAM64, vram, m_ram)
+
+        vram = image_meta.properties.get('hw_video_ram_vga', 0)
+        m_ram = int(flavor.extra_specs.get('hw_video:ram_vga_max_mb', 0))
+        self._set_video_driver_vram(video, fields.VideoRam.VGAMEM, vram, m_ram)
+
         guest.add_device(video)
 
         # NOTE(sean-k-mooney): return the video device we added

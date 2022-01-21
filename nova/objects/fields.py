@@ -582,6 +582,16 @@ class VideoModel(BaseNovaEnum):
     ALL = (CIRRUS, QXL, VGA, VMVGA, XEN, VIRTIO, GOP, NONE, BOCHS)
 
 
+class VideoRam(BaseNovaEnum):
+
+    RAM = "ram"
+    VRAM = "vram"
+    VRAM64 = "vram64"
+    VGAMEM = "vgamem"
+
+    ALL = (RAM, VRAM, VRAM64, VGAMEM)
+
+
 class VIFModel(BaseNovaEnum):
 
     LEGACY_VALUES = {"virtuale1000":
