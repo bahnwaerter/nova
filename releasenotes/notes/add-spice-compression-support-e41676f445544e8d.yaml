@@ -1,0 +1,17 @@
+---
+features:
+  - |
+    The following SPICE-related options are added to the ``spice``
+    configuration group of a Nova configuration:
+    
+    - image_compression
+    - jpeg_compression
+    - zlib_compression
+    - playback_compression
+    - streaming_mode
+    
+    These options can be used to enable and set the SPICE compression
+    settings for libvirt (QEMU/KVM) provisioned instances. Note that those
+    options are only taken into account if SPICE support is enabled (and
+    the VNC support is disabled). By default, these configuration options
+    are set to libvirt's default values.

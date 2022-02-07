@@ -5575,6 +5575,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(cfg.devices[3].type, 'vnc')
         self.assertEqual(cfg.devices[3].listen, '10.0.0.1')
         self.assertIsNone(cfg.devices[3].keymap)
+        self.assertIsNone(cfg.devices[3].image_compression)
+        self.assertIsNone(cfg.devices[3].jpeg_compression)
+        self.assertIsNone(cfg.devices[3].zlib_compression)
+        self.assertIsNone(cfg.devices[3].playback_compression)
+        self.assertIsNone(cfg.devices[3].streaming_mode)
 
     def test_get_guest_config_with_vnc_and_tablet(self):
         self.flags(enabled=True, group='vnc')
@@ -5605,6 +5610,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                               vconfig.LibvirtConfigMemoryBalloon)
 
         self.assertEqual(cfg.devices[3].type, 'vnc')
+        self.assertIsNone(cfg.devices[3].image_compression)
+        self.assertIsNone(cfg.devices[3].jpeg_compression)
+        self.assertIsNone(cfg.devices[3].zlib_compression)
+        self.assertIsNone(cfg.devices[3].playback_compression)
+        self.assertIsNone(cfg.devices[3].streaming_mode)
         self.assertEqual(cfg.devices[5].type, 'tablet')
 
     def test_get_guest_config_with_spice_and_tablet(self):
@@ -5641,6 +5651,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(cfg.devices[3].type, 'spice')
         self.assertEqual(cfg.devices[3].listen, '10.0.0.1')
         self.assertIsNone(cfg.devices[3].keymap)
+        self.assertEqual(cfg.devices[3].image_compression, 'auto_glz')
+        self.assertEqual(cfg.devices[3].jpeg_compression, 'auto')
+        self.assertEqual(cfg.devices[3].zlib_compression, 'auto')
+        self.assertTrue(cfg.devices[3].playback_compression)
+        self.assertEqual(cfg.devices[3].streaming_mode, 'off')
         self.assertEqual(cfg.devices[5].type, 'tablet')
 
     def test_get_guest_config_with_spice_and_agent(self):
@@ -5699,7 +5714,56 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self.assertEqual(cfg.devices[3].target_name, "com.redhat.spice.0")
             self.assertEqual(cfg.devices[3].type, 'spicevmc')
             self.assertEqual(cfg.devices[4].type, "spice")
+            self.assertEqual(cfg.devices[4].image_compression, 'auto_glz')
+            self.assertEqual(cfg.devices[4].jpeg_compression, 'auto')
+            self.assertEqual(cfg.devices[4].zlib_compression, 'auto')
+            self.assertTrue(cfg.devices[4].playback_compression)
+            self.assertEqual(cfg.devices[4].streaming_mode, 'off')
             self.assertEqual(cfg.devices[5].type, video_type)
+
+    def test_get_guest_config_with_spice_compression(self):
+        self.flags(enabled=False, group='vnc')
+        self.flags(virt_type='kvm', group='libvirt')
+        self.flags(enabled=True,
+                   agent_enabled=False,
+                   image_compression='auto_lz',
+                   jpeg_compression='never',
+                   zlib_compression='always',
+                   playback_compression=False,
+                   streaming_mode='all',
+                   server_listen='10.0.0.1',
+                   group='spice')
+        self.flags(pointer_model='usbtablet')
+
+        cfg = self._get_guest_config_with_graphics()
+
+        self.assertEqual(len(cfg.devices), 9)
+        self.assertIsInstance(cfg.devices[0],
+                              vconfig.LibvirtConfigGuestDisk)
+        self.assertIsInstance(cfg.devices[1],
+                              vconfig.LibvirtConfigGuestDisk)
+        self.assertIsInstance(cfg.devices[2],
+                              vconfig.LibvirtConfigGuestSerial)
+        self.assertIsInstance(cfg.devices[3],
+                              vconfig.LibvirtConfigGuestGraphics)
+        self.assertIsInstance(cfg.devices[4],
+                              vconfig.LibvirtConfigGuestVideo)
+        self.assertIsInstance(cfg.devices[5],
+                              vconfig.LibvirtConfigGuestInput)
+        self.assertIsInstance(cfg.devices[6],
+                              vconfig.LibvirtConfigGuestRng)
+        self.assertIsInstance(cfg.devices[7],
+                              vconfig.LibvirtConfigGuestUSBHostController)
+        self.assertIsInstance(cfg.devices[8],
+                              vconfig.LibvirtConfigMemoryBalloon)
+
+        self.assertEqual(cfg.devices[3].type, 'spice')
+        self.assertEqual(cfg.devices[3].listen, '10.0.0.1')
+        self.assertEqual(cfg.devices[3].image_compression, 'auto_lz')
+        self.assertEqual(cfg.devices[3].jpeg_compression, 'never')
+        self.assertEqual(cfg.devices[3].zlib_compression, 'always')
+        self.assertFalse(cfg.devices[3].playback_compression)
+        self.assertEqual(cfg.devices[3].streaming_mode, 'all')
 
     @mock.patch.object(host.Host, 'get_guest')
     @mock.patch.object(libvirt_driver.LibvirtDriver,
