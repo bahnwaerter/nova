@@ -187,14 +187,17 @@ class ImageMetaProps(base.NovaObject):
     # Version 1.28: Added 'socket' to 'hw_pci_numa_affinity_policy'
     # Version 1.29: Added 'hw_input_bus' field
     # Version 1.30: Added 'bochs' as an option to 'hw_video_model'
+    # Version 1.31: Added 'hw_video_screens' field
     # NOTE(efried): When bumping this version, the version of
     # ImageMetaPropsPayload must also be bumped. See its docstring for details.
-    VERSION = '1.30'
+    VERSION = '1.31'
 
     def obj_make_compatible(self, primitive, target_version):
         super(ImageMetaProps, self).obj_make_compatible(primitive,
                                                         target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 31):
+            primitive.pop('hw_video_screens', None)
         if target_version < (1, 30):
             video = primitive.get('hw_video_model', None)
             if video == fields.VideoModel.BOCHS:
@@ -423,6 +426,9 @@ class ImageMetaProps(base.NovaObject):
 
         # MB of video RAM to provide eg 64
         'hw_video_ram': fields.IntegerField(),
+
+        # number of screens per video adapter
+        'hw_video_screens': fields.IntegerField(),
 
         # name of a NIC device model eg virtio, e1000, rtl8139
         'hw_vif_model': fields.VIFModelField(),

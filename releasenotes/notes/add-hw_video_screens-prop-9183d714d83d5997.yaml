@@ -1,0 +1,6 @@
+---
+features:
+  - |
+    A new image property, ``hw_video_screens``, has been added. This property
+    can be used to set the number of screens per video adapter on compute nodes
+    using the libvirt virt driver.

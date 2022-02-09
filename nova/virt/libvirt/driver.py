@@ -5994,6 +5994,10 @@ class LibvirtDriver(driver.ComputeDriver):
             if not self._video_model_supported(video.type):
                 raise exception.InvalidVideoMode(model=video.type)
 
+        # Set the number of screens
+        if image_meta.properties.get('hw_video_screens') is not None:
+            video.heads = image_meta.properties.get('hw_video_screens', 1)
+
         # Set video memory, only if the flavor's limit is set
         video_ram = image_meta.properties.get('hw_video_ram', 0)
         max_vram = int(flavor.extra_specs.get('hw_video:ram_max_mb', 0))

@@ -6643,10 +6643,34 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertTrue(drvr._guest_add_video_device(guest))
         video = drvr._add_video_driver(guest, image_meta, flavor)
         self.assertEqual(model, video.type)
+        self.assertIsNone(video.heads)
         self.assertEqual(8192, video.vram)  # should be in bytes
+
+    def _test_add_video_driver_multi_screen(self, model):
+        self.flags(virt_type='kvm', group='libvirt')
+        # we could have used VNC here also we just need to enable
+        # one of the graphic consoles libvirt supports or else
+        # the call to _guest_add_video_device will not work.
+        self.flags(enabled=True, agent_enabled=True, group='spice')
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        guest = vconfig.LibvirtConfigGuest()
+        flavor = objects.Flavor(extra_specs={})
+        image_meta = objects.ImageMeta.from_dict({
+            'properties': {
+                'hw_video_model': model,
+                'hw_video_screens': 3,
+            },
+        })
+
+        self.assertTrue(drvr._guest_add_video_device(guest))
+        video = drvr._add_video_driver(guest, image_meta, flavor)
+        self.assertEqual(model, video.type)
+        self.assertEqual(3, video.heads)
 
     def test__add_video_driver(self):
         self._test_add_video_driver('qxl')
+        self._test_add_video_driver_multi_screen('qxl')
 
     def test__video_model_supported(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
